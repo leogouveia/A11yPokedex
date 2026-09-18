@@ -8,8 +8,20 @@ export class PokeApiError extends Error {
   }
 }
 
-export async function getPokeApi<T>(path: string): Promise<T> {
+export async function getPokeApi<T>(
+  path: string,
+  signal?: AbortSignal,
+): Promise<T> {
   const controller = new AbortController();
+  const abortRequest = () => controller.abort();
+
+  if (signal?.aborted) {
+    const error = new Error('A requisição foi cancelada.');
+    error.name = 'AbortError';
+    throw error;
+  }
+
+  signal?.addEventListener('abort', abortRequest, { once: true });
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
   try {
@@ -23,6 +35,10 @@ export async function getPokeApi<T>(path: string): Promise<T> {
 
     return (await response.json()) as T;
   } catch (error) {
+    if (signal?.aborted) {
+      throw error;
+    }
+
     if (error instanceof PokeApiError) {
       throw error;
     }
@@ -32,5 +48,6 @@ export async function getPokeApi<T>(path: string): Promise<T> {
     );
   } finally {
     clearTimeout(timeout);
+    signal?.removeEventListener('abort', abortRequest);
   }
 }

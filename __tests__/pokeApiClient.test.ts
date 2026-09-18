@@ -26,4 +26,15 @@ describe('getPokeApi', () => {
       ),
     );
   });
+
+  it('does not start a request when the signal is already aborted', async () => {
+    const fetchSpy = jest.spyOn(globalThis, 'fetch');
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(
+      getPokeApi('/pokemon', controller.signal),
+    ).rejects.toMatchObject({ name: 'AbortError' });
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
 });

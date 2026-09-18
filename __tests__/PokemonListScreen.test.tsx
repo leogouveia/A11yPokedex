@@ -16,6 +16,8 @@ jest.mock('react-native', () => {
     ReactRuntime.createElement('Pressable', props, props.children);
   const ActivityIndicator = (props: Record<string, unknown>) =>
     ReactRuntime.createElement('ActivityIndicator', props, props.children);
+  const TextInput = (props: Record<string, unknown>) =>
+    ReactRuntime.createElement('TextInput', props);
 
   function TestFlatList(props: {
     accessibilityLabel?: string;
@@ -49,14 +51,31 @@ jest.mock('react-native', () => {
     Pressable,
     StyleSheet: { create: (styles: unknown) => styles },
     Text,
+    TextInput,
     View,
   };
 });
 
 const mockUsePokemonList = jest.fn();
+const mockUsePokemonSearch = jest.fn();
 
 jest.mock('../src/features/pokemon-list/hooks/usePokemonList', () => ({
-  usePokemonList: () => mockUsePokemonList(),
+  usePokemonList: (...args: unknown[]) => mockUsePokemonList(...args),
+}));
+beforeEach(() => {
+  mockUsePokemonList.mockReset();
+  mockUsePokemonSearch.mockReset();
+  mockUsePokemonSearch.mockReturnValue({
+    data: undefined,
+    error: null,
+    isError: false,
+    isLoading: false,
+    refetch: jest.fn(),
+  });
+});
+
+jest.mock('../src/features/pokemon-search/hooks/usePokemonSearch', () => ({
+  usePokemonSearch: (...args: unknown[]) => mockUsePokemonSearch(...args),
 }));
 
 describe('PokemonListScreen', () => {
@@ -231,5 +250,179 @@ describe('PokemonListScreen', () => {
     expect(
       renderer.root.findByProps({ children: 'Carregando mais Pokémon.' }),
     ).toBeTruthy();
+  });
+
+  it('supports filtering by type and generation simultaneously', async () => {
+    mockUsePokemonList.mockReturnValue({
+      data: { pages: [{ items: [], nextOffset: null }] },
+      fetchNextPage: jest.fn(),
+      hasNextPage: false,
+      isError: false,
+      isFetchingNextPage: false,
+      isLoading: false,
+      isRefetching: false,
+      refetch: jest.fn(),
+    });
+
+    let renderer!: ReactTestRenderer.ReactTestRenderer;
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<PokemonListScreen />);
+      await Promise.resolve();
+    });
+
+    const typeButton = renderer.root.findByProps({
+      accessibilityLabel: 'Filtrar por tipo: fogo',
+    });
+    const generationButton = renderer.root.findByProps({
+      accessibilityLabel: 'Filtrar por geração: 1ª Geração',
+    });
+
+    await ReactTestRenderer.act(async () => {
+      typeButton.props.onPress();
+      generationButton.props.onPress();
+      await Promise.resolve();
+    });
+
+    expect(mockUsePokemonList).toHaveBeenLastCalledWith({
+      enabled: true,
+      generation: '1',
+      type: 'fire',
+    });
+  });
+
+  it('searches as the user types a name and shows matching Pokémon', async () => {
+    mockUsePokemonList.mockReturnValue({
+      data: { pages: [] },
+      fetchNextPage: jest.fn(),
+      hasNextPage: false,
+      isError: false,
+      isFetchingNextPage: false,
+      isLoading: false,
+      isRefetching: false,
+      refetch: jest.fn(),
+    });
+    mockUsePokemonSearch.mockReturnValue({
+      data: [
+        {
+          id: 4,
+          name: 'charmander',
+          imageUrl: 'https://example.com/4.png',
+        },
+      ],
+      error: null,
+      isError: false,
+      isLoading: false,
+      refetch: jest.fn(),
+    });
+
+    let renderer!: ReactTestRenderer.ReactTestRenderer;
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<PokemonListScreen />);
+      await Promise.resolve();
+    });
+
+    const searchInput = renderer.root.findByProps({
+      accessibilityLabel: 'Buscar Pokémon',
+    });
+
+    await ReactTestRenderer.act(async () => {
+      searchInput.props.onChangeText('Char');
+      await Promise.resolve();
+    });
+
+    expect(mockUsePokemonSearch).toHaveBeenCalledWith('Char');
+    expect(mockUsePokemonList).toHaveBeenCalledWith({ enabled: false });
+    expect(
+      renderer.root.findByProps({
+        accessibilityLabel: 'Charmander, número 4',
+      }),
+    ).toBeTruthy();
+  });
+
+  it('shows an empty search state without retry when nothing matches', async () => {
+    mockUsePokemonList.mockReturnValue({
+      data: { pages: [] },
+      fetchNextPage: jest.fn(),
+      hasNextPage: false,
+      isError: false,
+      isFetchingNextPage: false,
+      isLoading: false,
+      isRefetching: false,
+      refetch: jest.fn(),
+    });
+    mockUsePokemonSearch.mockReturnValue({
+      data: [],
+      error: null,
+      isError: false,
+      isLoading: false,
+      refetch: jest.fn(),
+    });
+
+    let renderer!: ReactTestRenderer.ReactTestRenderer;
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<PokemonListScreen />);
+      await Promise.resolve();
+    });
+    const searchInput = renderer.root.findByProps({
+      accessibilityLabel: 'Buscar Pokémon',
+    });
+
+    await ReactTestRenderer.act(async () => {
+      searchInput.props.onChangeText('xyz');
+      await Promise.resolve();
+    });
+
+    expect(
+      renderer.root.findByProps({
+        children: 'Nenhum resultado encontrado.',
+      }),
+    ).toBeTruthy();
+    expect(
+      renderer.root.findAllByProps({ accessibilityLabel: 'Tentar novamente' }),
+    ).toHaveLength(0);
+  });
+
+  it('renders a search error with retry', async () => {
+    const refetch = jest.fn();
+    mockUsePokemonList.mockReturnValue({
+      data: { pages: [] },
+      fetchNextPage: jest.fn(),
+      hasNextPage: false,
+      isError: false,
+      isFetchingNextPage: false,
+      isLoading: false,
+      isRefetching: false,
+      refetch: jest.fn(),
+    });
+    mockUsePokemonSearch.mockReturnValue({
+      data: undefined,
+      error: new Error('Falha de conexão.'),
+      isError: true,
+      isLoading: false,
+      refetch,
+    });
+
+    let renderer!: ReactTestRenderer.ReactTestRenderer;
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<PokemonListScreen />);
+      await Promise.resolve();
+    });
+    const searchInput = renderer.root.findByProps({
+      accessibilityLabel: 'Buscar Pokémon',
+    });
+
+    await ReactTestRenderer.act(async () => {
+      searchInput.props.onChangeText('fogo');
+      await Promise.resolve();
+    });
+
+    const retryButton = renderer.root.findByProps({
+      accessibilityLabel: 'Tentar novamente',
+    });
+    expect(
+      renderer.root.findByProps({ children: 'Falha de conexão.' }),
+    ).toBeTruthy();
+    await ReactTestRenderer.act(async () => retryButton.props.onPress());
+    expect(refetch).toHaveBeenCalledTimes(1);
   });
 });

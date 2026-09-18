@@ -58,6 +58,20 @@ Após implementar:
 
 Se uma validação não puder ser executada, explique o motivo.
 
+## Validação mínima
+
+Quando o projeto utilizar TypeScript, execute sempre:
+
+- typecheck;
+- lint;
+- testes automatizados relevantes.
+
+Quando a alteração afetar código executável da aplicação, execute também
+as validações de build/runtime aplicáveis ao ambiente.
+
+Nunca considere a implementação concluída enquanto uma validação obrigatória
+estiver falhando.
+
 # Limites
 
 Não:

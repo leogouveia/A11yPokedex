@@ -11,6 +11,16 @@ export type PokeApiListResponse = {
   results: PokeApiListEntry[];
 };
 
+export type PokeApiTypeResponse = {
+  pokemon: Array<{
+    pokemon: PokeApiListEntry;
+  }>;
+};
+
+export type PokeApiGenerationResponse = {
+  pokemon_species: PokeApiListEntry[];
+};
+
 export function mapPokemonListItem(entry: PokeApiListEntry): PokemonListItem {
   const id = Number(entry.url.match(/\/pokemon\/(\d+)\/?$/)?.[1]);
 
@@ -28,7 +38,17 @@ export function mapPokemonListItem(entry: PokeApiListEntry): PokemonListItem {
 export function mapPokemonList(
   response: PokeApiListResponse,
 ): PokemonListItem[] {
-  return response.results
-    .map(mapPokemonListItem)
-    .sort((first, second) => first.id - second.id);
+  return sortPokemonList(response.results.map(mapPokemonListItem));
+}
+
+export function mapPokemonTypeList(
+  response: PokeApiTypeResponse,
+): PokemonListItem[] {
+  return sortPokemonList(
+    response.pokemon.map(entry => mapPokemonListItem(entry.pokemon)),
+  );
+}
+
+function sortPokemonList(items: PokemonListItem[]): PokemonListItem[] {
+  return items.sort((first, second) => first.id - second.id);
 }
