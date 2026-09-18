@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -64,6 +66,9 @@ export function PokemonListScreen({
   const [selectedGeneration, setSelectedGeneration] = useState<string | null>(
     null,
   );
+  const [isFilterPanelVisible, setIsFilterPanelVisible] = useState(false);
+  const [draftType, setDraftType] = useState<string | null>(null);
+  const [draftGeneration, setDraftGeneration] = useState<string | null>(null);
   const isSearching = searchTerm.trim().length > 0;
   const listQuery = usePokemonList({
     enabled: !isSearching,
@@ -93,11 +98,29 @@ export function PokemonListScreen({
     return (
       <ScreenShell
         onChangeSearch={setSearchTerm}
-        onSelectGeneration={setSelectedGeneration}
-        onSelectType={setSelectedType}
+        onOpenFilters={() => {
+          setDraftType(selectedType);
+          setDraftGeneration(selectedGeneration);
+          setIsFilterPanelVisible(true);
+        }}
         searchTerm={searchTerm}
         selectedGeneration={selectedGeneration}
         selectedType={selectedType}
+        isFilterPanelVisible={isFilterPanelVisible}
+        draftGeneration={draftGeneration}
+        draftType={draftType}
+        onDraftGenerationChange={setDraftGeneration}
+        onDraftTypeChange={setDraftType}
+        onCloseFilters={() => setIsFilterPanelVisible(false)}
+        onClearFilters={() => {
+          setDraftType(null);
+          setDraftGeneration(null);
+        }}
+        onApplyFilters={() => {
+          setSelectedType(draftType);
+          setSelectedGeneration(draftGeneration);
+          setIsFilterPanelVisible(false);
+        }}
       >
         <StatusView label="Carregando Pokémon." loading />
       </ScreenShell>
@@ -108,11 +131,29 @@ export function PokemonListScreen({
     return (
       <ScreenShell
         onChangeSearch={setSearchTerm}
-        onSelectGeneration={setSelectedGeneration}
-        onSelectType={setSelectedType}
+        onOpenFilters={() => {
+          setDraftType(selectedType);
+          setDraftGeneration(selectedGeneration);
+          setIsFilterPanelVisible(true);
+        }}
         searchTerm={searchTerm}
         selectedGeneration={selectedGeneration}
         selectedType={selectedType}
+        isFilterPanelVisible={isFilterPanelVisible}
+        draftGeneration={draftGeneration}
+        draftType={draftType}
+        onDraftGenerationChange={setDraftGeneration}
+        onDraftTypeChange={setDraftType}
+        onCloseFilters={() => setIsFilterPanelVisible(false)}
+        onClearFilters={() => {
+          setDraftType(null);
+          setDraftGeneration(null);
+        }}
+        onApplyFilters={() => {
+          setSelectedType(draftType);
+          setSelectedGeneration(draftGeneration);
+          setIsFilterPanelVisible(false);
+        }}
       >
         <StatusView
           actionLabel="Tentar novamente"
@@ -130,11 +171,29 @@ export function PokemonListScreen({
   return (
     <ScreenShell
       onChangeSearch={setSearchTerm}
-      onSelectGeneration={setSelectedGeneration}
-      onSelectType={setSelectedType}
+      onOpenFilters={() => {
+        setDraftType(selectedType);
+        setDraftGeneration(selectedGeneration);
+        setIsFilterPanelVisible(true);
+      }}
       searchTerm={searchTerm}
       selectedGeneration={selectedGeneration}
       selectedType={selectedType}
+      isFilterPanelVisible={isFilterPanelVisible}
+      draftGeneration={draftGeneration}
+      draftType={draftType}
+      onDraftGenerationChange={setDraftGeneration}
+      onDraftTypeChange={setDraftType}
+      onCloseFilters={() => setIsFilterPanelVisible(false)}
+      onClearFilters={() => {
+        setDraftType(null);
+        setDraftGeneration(null);
+      }}
+      onApplyFilters={() => {
+        setSelectedType(draftType);
+        setSelectedGeneration(draftGeneration);
+        setIsFilterPanelVisible(false);
+      }}
     >
       <PokemonResultsList
         emptyActionLabel="Tentar novamente"
@@ -202,8 +261,15 @@ function SearchResults({
 type ScreenShellProps = {
   children: React.ReactNode;
   onChangeSearch: (value: string) => void;
-  onSelectGeneration?: (value: string | null) => void;
-  onSelectType?: (value: string | null) => void;
+  onOpenFilters?: () => void;
+  isFilterPanelVisible?: boolean;
+  draftGeneration?: string | null;
+  draftType?: string | null;
+  onDraftGenerationChange?: (value: string | null) => void;
+  onDraftTypeChange?: (value: string | null) => void;
+  onCloseFilters?: () => void;
+  onClearFilters?: () => void;
+  onApplyFilters?: () => void;
   searchTerm: string;
   selectedGeneration?: string | null;
   selectedType?: string | null;
@@ -212,8 +278,15 @@ type ScreenShellProps = {
 function ScreenShell({
   children,
   onChangeSearch,
-  onSelectGeneration,
-  onSelectType,
+  onOpenFilters,
+  isFilterPanelVisible,
+  draftGeneration,
+  draftType,
+  onDraftGenerationChange,
+  onDraftTypeChange,
+  onCloseFilters,
+  onClearFilters,
+  onApplyFilters,
   searchTerm,
   selectedGeneration,
   selectedType,
@@ -227,90 +300,197 @@ function ScreenShell({
         Explore os Pokémon por número da Pokédex.
       </Text>
       <PokemonSearchInput onChangeText={onChangeSearch} value={searchTerm} />
-      {onSelectType && onSelectGeneration ? (
+      {onOpenFilters ? (
         <PokemonFilterBar
-          onSelectGeneration={onSelectGeneration}
-          onSelectType={onSelectType}
+          onOpenFilters={onOpenFilters}
           selectedGeneration={selectedGeneration ?? null}
           selectedType={selectedType ?? null}
         />
       ) : null}
       {children}
+      {onOpenFilters && onCloseFilters && onApplyFilters ? (
+        <PokemonFilterPanel
+          draftGeneration={draftGeneration ?? null}
+          draftType={draftType ?? null}
+          onApply={onApplyFilters}
+          onClear={onClearFilters ?? (() => undefined)}
+          onClose={onCloseFilters}
+          onSelectGeneration={onDraftGenerationChange ?? (() => undefined)}
+          onSelectType={onDraftTypeChange ?? (() => undefined)}
+          visible={isFilterPanelVisible ?? false}
+        />
+      ) : null}
     </View>
   );
 }
 
 function PokemonFilterBar({
-  onSelectGeneration,
-  onSelectType,
+  onOpenFilters,
   selectedGeneration,
   selectedType,
 }: {
-  onSelectGeneration: (value: string | null) => void;
-  onSelectType: (value: string | null) => void;
+  onOpenFilters: () => void;
   selectedGeneration: string | null;
   selectedType: string | null;
 }) {
+  const selectedTypeLabel = TYPE_FILTERS.find(
+    filter => filter.value === selectedType,
+  )?.label;
+  const selectedGenerationLabel = GENERATION_FILTERS.find(
+    filter => filter.value === selectedGeneration,
+  )?.label;
+  const activeFilters = [selectedTypeLabel, selectedGenerationLabel].filter(
+    Boolean,
+  );
+
   return (
-    <View style={styles.filterSection}>
-      <Text style={styles.filterTitle}>Filtrar por tipo</Text>
-      <View style={styles.filterRow}>
-        {TYPE_FILTERS.map(type => {
-          const isSelected = selectedType === type.value;
-
-          return (
-            <Pressable
-              accessibilityHint={
-                isSelected
-                  ? 'Remove o filtro de tipo.'
-                  : 'Aplica o filtro de tipo.'
-              }
-              accessibilityLabel={`Filtrar por tipo: ${type.label.toLowerCase()}`}
-              accessibilityRole="button"
-              accessibilityState={{ selected: isSelected }}
-              key={type.value}
-              onPress={() => onSelectType(isSelected ? null : type.value)}
-              style={[
-                styles.filterChip,
-                isSelected && styles.filterChipSelected,
-              ]}
-            >
-              <Text style={styles.filterChipText}>{type.label}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
-
-      <Text style={styles.filterTitle}>Filtrar por geração</Text>
-      <View style={styles.filterRow}>
-        {GENERATION_FILTERS.map(generation => {
-          const isSelected = selectedGeneration === generation.value;
-
-          return (
-            <Pressable
-              accessibilityHint={
-                isSelected
-                  ? 'Remove o filtro de geração.'
-                  : 'Aplica o filtro de geração.'
-              }
-              accessibilityLabel={`Filtrar por geração: ${generation.label}`}
-              accessibilityRole="button"
-              accessibilityState={{ selected: isSelected }}
-              key={generation.value}
-              onPress={() =>
-                onSelectGeneration(isSelected ? null : generation.value)
-              }
-              style={[
-                styles.filterChip,
-                isSelected && styles.filterChipSelected,
-              ]}
-            >
-              <Text style={styles.filterChipText}>{generation.label}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
+    <View style={styles.filterToolbar}>
+      <Pressable
+        accessibilityLabel="Abrir filtros"
+        accessibilityHint="Abre os filtros de tipo e geração."
+        accessibilityRole="button"
+        onPress={onOpenFilters}
+        style={styles.filterButton}
+      >
+        <Text style={styles.filterButtonText}>Filtros</Text>
+      </Pressable>
+      <Text accessibilityLiveRegion="polite" style={styles.filterSummary}>
+        {activeFilters.length
+          ? activeFilters.join(' · ')
+          : 'Nenhum filtro ativo'}
+      </Text>
     </View>
+  );
+}
+
+function PokemonFilterPanel({
+  draftGeneration,
+  draftType,
+  onApply,
+  onClear,
+  onClose,
+  onSelectGeneration,
+  onSelectType,
+  visible,
+}: {
+  draftGeneration: string | null;
+  draftType: string | null;
+  onApply: () => void;
+  onClear: () => void;
+  onClose: () => void;
+  onSelectGeneration: (value: string | null) => void;
+  onSelectType: (value: string | null) => void;
+  visible: boolean;
+}) {
+  return (
+    <Modal
+      accessibilityViewIsModal
+      animationType="slide"
+      onRequestClose={onClose}
+      transparent
+      visible={visible}
+    >
+      <View style={styles.modalBackdrop}>
+        <View style={styles.filterPanel}>
+          <View style={styles.panelHeader}>
+            <Text accessibilityRole="header" style={styles.panelTitle}>
+              Filtros
+            </Text>
+            <Pressable
+              accessibilityLabel="Fechar filtros"
+              accessibilityRole="button"
+              onPress={onClose}
+              style={styles.closeButton}
+            >
+              <Text style={styles.closeButtonText}>Fechar</Text>
+            </Pressable>
+          </View>
+          <ScrollView contentContainerStyle={styles.panelContent}>
+            <Text style={styles.filterTitle}>Filtrar por tipo</Text>
+            <View style={styles.filterRow}>
+              {TYPE_FILTERS.map(type => (
+                <FilterOption
+                  isSelected={draftType === type.value}
+                  key={type.value}
+                  label={type.label}
+                  onPress={() =>
+                    onSelectType(draftType === type.value ? null : type.value)
+                  }
+                  type="tipo"
+                />
+              ))}
+            </View>
+            <Text style={styles.filterTitle}>Filtrar por geração</Text>
+            <View style={styles.filterRow}>
+              {GENERATION_FILTERS.map(generation => (
+                <FilterOption
+                  isSelected={draftGeneration === generation.value}
+                  key={generation.value}
+                  label={generation.label}
+                  onPress={() =>
+                    onSelectGeneration(
+                      draftGeneration === generation.value
+                        ? null
+                        : generation.value,
+                    )
+                  }
+                  type="geração"
+                />
+              ))}
+            </View>
+          </ScrollView>
+          <View style={styles.panelActions}>
+            <Pressable
+              accessibilityLabel="Limpar filtros"
+              accessibilityRole="button"
+              onPress={onClear}
+              style={styles.secondaryButton}
+            >
+              <Text style={styles.secondaryButtonText}>Limpar filtros</Text>
+            </Pressable>
+            <Pressable
+              accessibilityLabel="Aplicar filtros"
+              accessibilityRole="button"
+              onPress={onApply}
+              style={styles.applyButton}
+            >
+              <Text style={styles.applyButtonText}>Aplicar filtros</Text>
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function FilterOption({
+  isSelected,
+  label,
+  onPress,
+  type,
+}: {
+  isSelected: boolean;
+  label: string;
+  onPress: () => void;
+  type: 'tipo' | 'geração';
+}) {
+  return (
+    <Pressable
+      accessibilityHint={
+        isSelected
+          ? `Remove o filtro de ${type}.`
+          : `Aplica o filtro de ${type}.`
+      }
+      accessibilityLabel={`Filtrar por ${type}: ${label}`}
+      accessibilityRole="button"
+      accessibilityState={{ selected: isSelected }}
+      onPress={onPress}
+      style={[styles.filterChip, isSelected && styles.filterChipSelected]}
+    >
+      <Text allowFontScaling style={styles.filterChipText}>
+        {label}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -453,19 +633,110 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  filterButton: {
+    alignItems: 'center',
+    backgroundColor: '#0B7285',
+    borderRadius: 6,
+    justifyContent: 'center',
+    minHeight: 48,
+    paddingHorizontal: 20,
+  },
+  filterButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
   filterRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     marginBottom: 8,
   },
-  filterSection: {
-    marginBottom: 12,
+  filterSummary: {
+    color: '#486581',
+    flex: 1,
+    fontSize: 14,
+    marginLeft: 12,
   },
   filterTitle: {
     color: '#486581',
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 4,
+  },
+  filterToolbar: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  modalBackdrop: {
+    backgroundColor: 'rgba(16, 42, 67, 0.45)',
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  filterPanel: {
+    backgroundColor: '#F4F7F9',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    maxHeight: '90%',
+    padding: 16,
+  },
+  panelHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  panelTitle: {
+    color: '#102A43',
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  closeButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+    paddingHorizontal: 8,
+  },
+  closeButtonText: {
+    color: '#0B7285',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  panelContent: {
+    paddingBottom: 8,
+  },
+  panelActions: {
+    borderTopColor: '#D9E2EC',
+    borderTopWidth: 1,
+    gap: 8,
+    paddingTop: 12,
+  },
+  secondaryButton: {
+    alignItems: 'center',
+    borderColor: '#486581',
+    borderRadius: 6,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 48,
+    paddingHorizontal: 20,
+  },
+  secondaryButtonText: {
+    color: '#102A43',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  applyButton: {
+    alignItems: 'center',
+    backgroundColor: '#0B7285',
+    borderRadius: 6,
+    justifyContent: 'center',
+    minHeight: 48,
+    paddingHorizontal: 20,
+  },
+  applyButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
   },
   list: {
     paddingBottom: 24,

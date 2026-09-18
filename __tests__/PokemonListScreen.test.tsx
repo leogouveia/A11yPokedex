@@ -16,6 +16,12 @@ jest.mock('react-native', () => {
     ReactRuntime.createElement('Pressable', props, props.children);
   const ActivityIndicator = (props: Record<string, unknown>) =>
     ReactRuntime.createElement('ActivityIndicator', props, props.children);
+  const Modal = (props: Record<string, unknown>) =>
+    props.visible
+      ? ReactRuntime.createElement('Modal', props, props.children)
+      : null;
+  const ScrollView = (props: Record<string, unknown>) =>
+    ReactRuntime.createElement('ScrollView', props, props.children);
   const TextInput = (props: Record<string, unknown>) =>
     ReactRuntime.createElement('TextInput', props);
 
@@ -48,7 +54,9 @@ jest.mock('react-native', () => {
     ActivityIndicator,
     FlatList: TestFlatList,
     Image,
+    Modal,
     Pressable,
+    ScrollView,
     StyleSheet: { create: (styles: unknown) => styles },
     Text,
     TextInput,
@@ -252,7 +260,7 @@ describe('PokemonListScreen', () => {
     ).toBeTruthy();
   });
 
-  it('supports filtering by type and generation simultaneously', async () => {
+  it('applies type and generation filters together from the filter panel', async () => {
     mockUsePokemonList.mockReturnValue({
       data: { pages: [{ items: [], nextOffset: null }] },
       fetchNextPage: jest.fn(),
@@ -270,8 +278,17 @@ describe('PokemonListScreen', () => {
       await Promise.resolve();
     });
 
+    const openFiltersButton = renderer.root.findByProps({
+      accessibilityLabel: 'Abrir filtros',
+    });
+
+    await ReactTestRenderer.act(async () => {
+      openFiltersButton.props.onPress();
+      await Promise.resolve();
+    });
+
     const typeButton = renderer.root.findByProps({
-      accessibilityLabel: 'Filtrar por tipo: fogo',
+      accessibilityLabel: 'Filtrar por tipo: Fogo',
     });
     const generationButton = renderer.root.findByProps({
       accessibilityLabel: 'Filtrar por geração: 1ª Geração',
@@ -285,9 +302,76 @@ describe('PokemonListScreen', () => {
 
     expect(mockUsePokemonList).toHaveBeenLastCalledWith({
       enabled: true,
+      generation: undefined,
+      type: undefined,
+    });
+
+    const applyButton = renderer.root.findByProps({
+      accessibilityLabel: 'Aplicar filtros',
+    });
+    await ReactTestRenderer.act(async () => applyButton.props.onPress());
+
+    expect(mockUsePokemonList).toHaveBeenLastCalledWith({
+      enabled: true,
       generation: '1',
       type: 'fire',
     });
+  });
+
+  it('discards temporary filter selections when the panel is cancelled', async () => {
+    mockUsePokemonList.mockReturnValue({
+      data: { pages: [{ items: [], nextOffset: null }] },
+      fetchNextPage: jest.fn(),
+      hasNextPage: false,
+      isError: false,
+      isFetchingNextPage: false,
+      isLoading: false,
+      isRefetching: false,
+      refetch: jest.fn(),
+    });
+
+    let renderer!: ReactTestRenderer.ReactTestRenderer;
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<PokemonListScreen />);
+      await Promise.resolve();
+    });
+
+    await ReactTestRenderer.act(async () => {
+      renderer.root
+        .findByProps({
+          accessibilityLabel: 'Abrir filtros',
+        })
+        .props.onPress();
+      await Promise.resolve();
+    });
+    await ReactTestRenderer.act(async () => {
+      renderer.root
+        .findByProps({
+          accessibilityLabel: 'Filtrar por tipo: Fogo',
+        })
+        .props.onPress();
+      renderer.root
+        .findByProps({
+          accessibilityLabel: 'Fechar filtros',
+        })
+        .props.onPress();
+      await Promise.resolve();
+    });
+
+    await ReactTestRenderer.act(async () => {
+      renderer.root
+        .findByProps({
+          accessibilityLabel: 'Abrir filtros',
+        })
+        .props.onPress();
+      await Promise.resolve();
+    });
+
+    expect(
+      renderer.root.findByProps({
+        accessibilityLabel: 'Filtrar por tipo: Fogo',
+      }).props.accessibilityState,
+    ).toEqual({ selected: false });
   });
 
   it('searches as the user types a name and shows matching Pokémon', async () => {
