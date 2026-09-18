@@ -31,6 +31,8 @@ Re.Pack 5 e compativel com as versoes atuais do projeto e atende explicitamente 
 - O pipeline de validacao precisara cobrir Android e iOS, alem de Fast Refresh e source maps.
 - A dependencia do bundler passa a ser uma restricao operacional: upgrades de React Native e Re.Pack deverao ser avaliados em conjunto.
 - A versao canary deve ser reavaliada quando uma versao estavel do Re.Pack 5 com suporte ao RN 0.87 estiver disponivel.
+- `@react-native/js-polyfills` e declarado diretamente na versao `0.87.1` para tornar explicita a compatibilidade exigida pelo layout do React Native 0.87.
+- O Re.Pack canary mantem `image-size@1.2.1`, com duas vulnerabilidades altas reportadas pelo npm audit e sem correcao compativel disponivel; isso permanece como divida tecnica ate correcao upstream segura.
 - Nenhum beneficio de code splitting ou Module Federation sera assumido sem novo requisito e novo ADR.
 
 ## Requisitos e Skills relacionados

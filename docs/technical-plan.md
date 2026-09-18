@@ -173,3 +173,4 @@ Executar em Android/TalkBack e iOS/VoiceOver: ordem de leitura, rotulos, foco, a
 - A PokéAPI fornece nomes e descricoes em varios idiomas; deve ser definido o fallback quando nao houver entrada pt-BR.
 - A migracao pode exigir ajustes nos scripts da React Native Community CLI e nos pontos nativos de carregamento do bundle; sucesso da compilacao Rspack isolada nao prova que o app nativo inicia.
 - A configuracao de Re.Pack deve ser mantida compativel com a versao instalada; exemplos de Re.Pack anteriores nao devem ser copiados sem verificacao. A implementacao atual fixa temporariamente o canary 5.4.0 por causa das mudancas de layout do RN 0.87, devendo migrar para uma release estavel compativel quando disponivel.
+- O Re.Pack canary introduz `image-size@1.2.1`, atualmente reportado pelo npm audit com duas vulnerabilidades altas e sem atualizacao segura disponivel; nao usar overrides ou substituicoes sem evidencia de compatibilidade.
