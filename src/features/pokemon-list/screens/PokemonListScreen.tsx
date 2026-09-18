@@ -7,11 +7,19 @@ import {
   Text,
   View,
 } from 'react-native';
+import type { RootStackParamList } from '../../../app/AppNavigator';
 import type { PokemonListItem as PokemonListItemModel } from '../../../domain/pokemon/models';
 import { PokemonSearchInput } from '../../pokemon-search/components/PokemonSearchInput';
 import { usePokemonSearch } from '../../pokemon-search/hooks/usePokemonSearch';
 import { PokemonListItem } from '../components/PokemonListItem';
 import { usePokemonList } from '../hooks/usePokemonList';
+
+type PokemonListNavigation = {
+  navigate: (
+    screen: 'PokemonDetail',
+    params: RootStackParamList['PokemonDetail'],
+  ) => void;
+};
 
 const TYPE_FILTERS = [
   { label: 'Normal', value: 'normal' },
@@ -46,7 +54,11 @@ const GENERATION_FILTERS = [
   { label: '9ª Geração', value: '9' },
 ];
 
-export function PokemonListScreen() {
+export function PokemonListScreen({
+  navigation,
+}: {
+  navigation?: PokemonListNavigation;
+} = {}) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [selectedGeneration, setSelectedGeneration] = useState<string | null>(
@@ -67,6 +79,7 @@ export function PokemonListScreen() {
         isError={searchQuery.isError}
         isLoading={searchQuery.isLoading}
         items={searchQuery.data ?? []}
+        navigation={navigation}
         onChangeSearch={setSearchTerm}
         onRetry={() => searchQuery.refetch()}
         searchTerm={searchTerm}
@@ -128,6 +141,7 @@ export function PokemonListScreen() {
         emptyLabel="Nenhum Pokémon encontrado."
         isLoadingMore={listQuery.isFetchingNextPage || listQuery.isRefetching}
         items={items}
+        navigation={navigation}
         onEmptyAction={() => listQuery.refetch()}
         onEndReached={() => {
           if (listQuery.hasNextPage && !listQuery.isFetchingNextPage) {
@@ -144,6 +158,7 @@ type SearchResultsProps = {
   isError: boolean;
   isLoading: boolean;
   items: PokemonListItemModel[];
+  navigation?: PokemonListNavigation;
   onChangeSearch: (value: string) => void;
   onRetry: () => void;
   searchTerm: string;
@@ -154,6 +169,7 @@ function SearchResults({
   isError,
   isLoading,
   items,
+  navigation,
   onChangeSearch,
   onRetry,
   searchTerm,
@@ -176,6 +192,7 @@ function SearchResults({
         <PokemonResultsList
           emptyLabel="Nenhum resultado encontrado."
           items={items}
+          navigation={navigation}
         />
       )}
     </ScreenShell>
@@ -302,6 +319,7 @@ type PokemonResultsListProps = {
   emptyLabel: string;
   isLoadingMore?: boolean;
   items: PokemonListItemModel[];
+  navigation?: PokemonListNavigation;
   onEmptyAction?: () => void;
   onEndReached?: () => void;
 };
@@ -311,6 +329,7 @@ function PokemonResultsList({
   emptyLabel,
   isLoadingMore = false,
   items,
+  navigation,
   onEmptyAction,
   onEndReached,
 }: PokemonResultsListProps) {
@@ -339,7 +358,17 @@ function PokemonResultsList({
       }
       onEndReached={onEndReached}
       onEndReachedThreshold={0.5}
-      renderItem={({ item }) => <PokemonListItem pokemon={item} />}
+      renderItem={({ item }) => (
+        <PokemonListItem
+          onPress={
+            navigation
+              ? () =>
+                  navigation.navigate('PokemonDetail', { pokemonId: item.id })
+              : undefined
+          }
+          pokemon={item}
+        />
+      )}
     />
   );
 }

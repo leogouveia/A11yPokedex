@@ -291,6 +291,7 @@ describe('PokemonListScreen', () => {
   });
 
   it('searches as the user types a name and shows matching Pokémon', async () => {
+    const navigate = jest.fn();
     mockUsePokemonList.mockReturnValue({
       data: { pages: [] },
       fetchNextPage: jest.fn(),
@@ -317,7 +318,9 @@ describe('PokemonListScreen', () => {
 
     let renderer!: ReactTestRenderer.ReactTestRenderer;
     await ReactTestRenderer.act(async () => {
-      renderer = ReactTestRenderer.create(<PokemonListScreen />);
+      renderer = ReactTestRenderer.create(
+        <PokemonListScreen navigation={{ navigate }} />,
+      );
       await Promise.resolve();
     });
 
@@ -332,11 +335,13 @@ describe('PokemonListScreen', () => {
 
     expect(mockUsePokemonSearch).toHaveBeenCalledWith('Char');
     expect(mockUsePokemonList).toHaveBeenCalledWith({ enabled: false });
-    expect(
-      renderer.root.findByProps({
-        accessibilityLabel: 'Charmander, número 4',
-      }),
-    ).toBeTruthy();
+    const result = renderer.root.findByProps({
+      accessibilityLabel: 'Charmander, número 4',
+    });
+    expect(result).toBeTruthy();
+
+    ReactTestRenderer.act(() => result.props.onPress());
+    expect(navigate).toHaveBeenCalledWith('PokemonDetail', { pokemonId: 4 });
   });
 
   it('shows an empty search state without retry when nothing matches', async () => {

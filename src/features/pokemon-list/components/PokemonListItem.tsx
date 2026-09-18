@@ -1,8 +1,9 @@
 import React from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { PokemonListItem as PokemonListItemModel } from '../../../domain/pokemon/models';
 
 type Props = {
+  onPress?: () => void;
   pokemon: PokemonListItemModel;
 };
 
@@ -10,11 +11,14 @@ function formatName(name: string) {
   return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
-export function PokemonListItem({ pokemon }: Props) {
+export function PokemonListItem({ onPress, pokemon }: Props) {
   return (
-    <View
+    <Pressable
       accessible
       accessibilityLabel={`${formatName(pokemon.name)}, número ${pokemon.id}`}
+      accessibilityHint={onPress ? 'Abre os detalhes do Pokémon.' : undefined}
+      accessibilityRole={onPress ? 'button' : 'text'}
+      onPress={onPress}
       style={styles.item}
     >
       <Image
@@ -32,7 +36,7 @@ export function PokemonListItem({ pokemon }: Props) {
           {formatName(pokemon.name)}
         </Text>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
