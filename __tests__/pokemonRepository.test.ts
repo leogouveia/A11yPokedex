@@ -22,10 +22,16 @@ describe('pokemonRepository', () => {
   it('maps a page to sorted domain items and the next offset', async () => {
     mockedGetPokeApi.mockResolvedValue({
       count: 2,
-      next: `https://pokeapi.co/api/v2/pokemon?offset=${POKEMON_PAGE_SIZE}&limit=${POKEMON_PAGE_SIZE}`,
+      next: `https://pokeapi.co/api/v2/pokemon-species?offset=${POKEMON_PAGE_SIZE}&limit=${POKEMON_PAGE_SIZE}`,
       results: [
-        { name: 'ivysaur', url: 'https://pokeapi.co/api/v2/pokemon/2/' },
-        { name: 'bulbasaur', url: 'https://pokeapi.co/api/v2/pokemon/1/' },
+        {
+          name: 'ivysaur',
+          url: 'https://pokeapi.co/api/v2/pokemon-species/2/',
+        },
+        {
+          name: 'bulbasaur',
+          url: 'https://pokeapi.co/api/v2/pokemon-species/1/',
+        },
       ],
     });
 
@@ -46,14 +52,21 @@ describe('pokemonRepository', () => {
       ],
       nextOffset: 20,
     });
-    expect(mockedGetPokeApi).toHaveBeenCalledWith('/pokemon?offset=0&limit=20');
+    expect(mockedGetPokeApi).toHaveBeenCalledWith(
+      '/pokemon-species?offset=0&limit=20',
+    );
   });
 
   it('marks the last page without a next offset', async () => {
     mockedGetPokeApi.mockResolvedValue({
       count: 1,
       next: null,
-      results: [{ name: 'mew', url: 'https://pokeapi.co/api/v2/pokemon/151/' }],
+      results: [
+        {
+          name: 'mew',
+          url: 'https://pokeapi.co/api/v2/pokemon-species/151/',
+        },
+      ],
     });
 
     await expect(getPokemonPage(140)).resolves.toMatchObject({
@@ -66,9 +79,18 @@ describe('pokemonRepository', () => {
       count: 3,
       next: null,
       results: [
-        { name: 'bulbasaur', url: 'https://pokeapi.co/api/v2/pokemon/1/' },
-        { name: 'charmander', url: 'https://pokeapi.co/api/v2/pokemon/4/' },
-        { name: 'charizard', url: 'https://pokeapi.co/api/v2/pokemon/6/' },
+        {
+          name: 'bulbasaur',
+          url: 'https://pokeapi.co/api/v2/pokemon-species/1/',
+        },
+        {
+          name: 'charmander',
+          url: 'https://pokeapi.co/api/v2/pokemon-species/4/',
+        },
+        {
+          name: 'charizard',
+          url: 'https://pokeapi.co/api/v2/pokemon-species/6/',
+        },
       ],
     });
 
@@ -87,7 +109,7 @@ describe('pokemonRepository', () => {
       },
     ]);
     expect(mockedGetPokeApi).toHaveBeenCalledWith(
-      `/pokemon?offset=0&limit=${POKEMON_INDEX_LIMIT}`,
+      `/pokemon-species?offset=0&limit=${POKEMON_INDEX_LIMIT}`,
     );
   });
 
@@ -96,8 +118,14 @@ describe('pokemonRepository', () => {
       count: 2,
       next: null,
       results: [
-        { name: 'bulbasaur', url: 'https://pokeapi.co/api/v2/pokemon/1/' },
-        { name: 'pikachu', url: 'https://pokeapi.co/api/v2/pokemon/25/' },
+        {
+          name: 'bulbasaur',
+          url: 'https://pokeapi.co/api/v2/pokemon-species/1/',
+        },
+        {
+          name: 'pikachu',
+          url: 'https://pokeapi.co/api/v2/pokemon-species/25/',
+        },
       ],
     });
 
@@ -192,16 +220,39 @@ describe('pokemonRepository', () => {
         };
       }
 
-      if (url === `/pokemon?offset=0&limit=${POKEMON_INDEX_LIMIT}`) {
+      if (url === '/pokemon/4' || url === '/pokemon/6') {
+        return { is_default: true };
+      }
+
+      if (url === '/pokemon/37') {
+        return { is_default: false };
+      }
+
+      if (url === `/pokemon-species?offset=0&limit=${POKEMON_INDEX_LIMIT}`) {
         return {
           count: 10,
           next: null,
           results: [
-            { name: 'bulbasaur', url: 'https://pokeapi.co/api/v2/pokemon/1/' },
-            { name: 'charmander', url: 'https://pokeapi.co/api/v2/pokemon/4/' },
-            { name: 'charizard', url: 'https://pokeapi.co/api/v2/pokemon/6/' },
-            { name: 'squirtle', url: 'https://pokeapi.co/api/v2/pokemon/7/' },
-            { name: 'vulpix', url: 'https://pokeapi.co/api/v2/pokemon/37/' },
+            {
+              name: 'bulbasaur',
+              url: 'https://pokeapi.co/api/v2/pokemon-species/1/',
+            },
+            {
+              name: 'charmander',
+              url: 'https://pokeapi.co/api/v2/pokemon-species/4/',
+            },
+            {
+              name: 'charizard',
+              url: 'https://pokeapi.co/api/v2/pokemon-species/6/',
+            },
+            {
+              name: 'squirtle',
+              url: 'https://pokeapi.co/api/v2/pokemon-species/7/',
+            },
+            {
+              name: 'vulpix',
+              url: 'https://pokeapi.co/api/v2/pokemon-species/37/',
+            },
           ],
         };
       }
@@ -227,7 +278,10 @@ describe('pokemonRepository', () => {
       count: 1,
       next: null,
       results: [
-        { name: 'bulbasaur', url: 'https://pokeapi.co/api/v2/pokemon/1/' },
+        {
+          name: 'bulbasaur',
+          url: 'https://pokeapi.co/api/v2/pokemon-species/1/',
+        },
       ],
     });
 

@@ -6,15 +6,16 @@ import {
 } from '../../../domain/pokemon/search';
 import { getPokeApi } from '../client';
 import {
-  mapPokemonList,
   mapPokemonTypeList,
   type PokeApiGenerationResponse,
   type PokeApiListResponse,
+  mapPokemonSpeciesList,
   type PokeApiTypeResponse,
 } from '../mappers';
 
 export const POKEMON_PAGE_SIZE = 20;
 export const POKEMON_INDEX_LIMIT = 20000;
+const DEFAULT_STATUS_REQUEST_CONCURRENCY = 8;
 
 export type PokemonPage = {
   items: PokemonListItem[];
@@ -50,11 +51,11 @@ export async function getPokemonPage(
   }
 
   const response = await getPokeApi<PokeApiListResponse>(
-    `/pokemon?offset=${offset}&limit=${POKEMON_PAGE_SIZE}`,
+    `/pokemon-species?offset=${offset}&limit=${POKEMON_PAGE_SIZE}`,
   );
 
   return {
-    items: mapPokemonList(response),
+    items: mapPokemonSpeciesList(response),
     nextOffset: response.next === null ? null : offset + POKEMON_PAGE_SIZE,
   };
 }
@@ -82,7 +83,8 @@ export async function searchPokemon(
     const response = signal
       ? await getPokeApi<PokeApiTypeResponse>(`/type/${type}`, signal)
       : await getPokeApi<PokeApiTypeResponse>(`/type/${type}`);
-    return mapPokemonTypeList(response);
+    const items = mapPokemonTypeList(response);
+    return filterDefaultPokemon(items, signal);
   }
 
   const index = await loadPokemonNameIndex(signal);
@@ -119,8 +121,11 @@ async function getFilteredPokemonIds(
     const typeResponse = await getPokeApi<PokeApiTypeResponse>(
       `/type/${normalizedType}`,
     );
+    const defaultItems = await filterDefaultPokemon(
+      mapPokemonTypeList(typeResponse),
+    );
     filterIds.push(
-      new Set(mapPokemonTypeList(typeResponse).map(item => item.id)),
+      new Set(defaultItems.map(item => item.id)),
     );
   }
 
@@ -175,14 +180,14 @@ function loadPokemonNameIndex(
     pokemonNameIndexPromise = (
       signal
         ? getPokeApi<PokeApiListResponse>(
-            `/pokemon?offset=0&limit=${POKEMON_INDEX_LIMIT}`,
+            `/pokemon-species?offset=0&limit=${POKEMON_INDEX_LIMIT}`,
             signal,
           )
         : getPokeApi<PokeApiListResponse>(
-            `/pokemon?offset=0&limit=${POKEMON_INDEX_LIMIT}`,
+            `/pokemon-species?offset=0&limit=${POKEMON_INDEX_LIMIT}`,
           )
     )
-      .then(mapPokemonList)
+      .then(mapPokemonSpeciesList)
       .catch(error => {
         pokemonNameIndexPromise = null;
         throw error;
@@ -190,6 +195,39 @@ function loadPokemonNameIndex(
   }
 
   return pokemonNameIndexPromise;
+}
+
+async function filterDefaultPokemon(
+  items: PokemonListItem[],
+  signal?: AbortSignal,
+): Promise<PokemonListItem[]> {
+  const uniqueItems = Array.from(
+    new Map(items.map(item => [item.id, item])).values(),
+  );
+  const defaultStatusById = new Map<number, boolean | undefined>();
+  let nextItemIndex = 0;
+
+  async function loadNextDefaultStatus() {
+    while (nextItemIndex < uniqueItems.length) {
+      const item = uniqueItems[nextItemIndex];
+      nextItemIndex += 1;
+      const detail = await getPokeApi<{ is_default?: boolean }>(
+        `/pokemon/${item.id}`,
+        signal,
+      );
+      defaultStatusById.set(item.id, detail.is_default);
+    }
+  }
+
+  const workerCount = Math.min(
+    DEFAULT_STATUS_REQUEST_CONCURRENCY,
+    uniqueItems.length,
+  );
+  await Promise.all(
+    Array.from({ length: workerCount }, () => loadNextDefaultStatus()),
+  );
+
+  return items.filter(item => defaultStatusById.get(item.id) !== false);
 }
 
 export function resetPokemonRepositoryCache() {

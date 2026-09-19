@@ -13,7 +13,12 @@ export type PokeApiPokemonResponse = {
   abilities: Array<{ ability: NamedApiResource }>;
   height: number;
   id: number;
-  moves: Array<{ move: NamedApiResource }>;
+  moves: Array<{
+    move: NamedApiResource;
+    version_group_details?: Array<{
+      move_learn_method: NamedApiResource;
+    }>;
+  }>;
   name: string;
   sprites: {
     other?: {
@@ -88,7 +93,13 @@ export function mapPokemonDetail(
     imageUrl:
       pokemon.sprites.other?.['official-artwork']?.front_default ??
       getArtworkUrl(pokemon.id),
-    moves: pokemon.moves.map(entry => entry.move.name),
+    moves: pokemon.moves
+      .filter(entry =>
+        entry.version_group_details?.some(
+          detail => detail.move_learn_method.name === 'level-up',
+        ),
+      )
+      .map(entry => entry.move.name),
     name: pokemon.name,
     stats: pokemon.stats.map(mapStat),
     types: pokemon.types.map(

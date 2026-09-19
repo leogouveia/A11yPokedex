@@ -15,7 +15,24 @@ describe('pokemonDetailRepository', () => {
           abilities: [{ ability: { name: 'overgrow', url: '' } }],
           height: 7,
           id: 1,
-          moves: [{ move: { name: 'tackle', url: '' } }],
+          moves: [
+            {
+              move: { name: 'tackle', url: '' },
+              version_group_details: [
+                {
+                  move_learn_method: { name: 'level-up', url: '' },
+                },
+              ],
+            },
+            {
+              move: { name: 'cut', url: '' },
+              version_group_details: [
+                {
+                  move_learn_method: { name: 'machine', url: '' },
+                },
+              ],
+            },
+          ],
           name: 'bulbasaur',
           sprites: { other: { 'official-artwork': { front_default: 'art' } } },
           stats: [

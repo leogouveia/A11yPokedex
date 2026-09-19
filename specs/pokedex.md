@@ -16,7 +16,7 @@ O conteúdo do aplicativo é exibido em português (pt-BR).
 
 ## Exploração de Pokémon
 
-- RF01: O sistema deve exibir uma lista de Pokémon ordenada por número da Pokédex, carregada de forma paginada (scroll infinito ou paginação equivalente).
+- RF01: O sistema deve exibir uma lista de Pokémon ordenada por número da Pokédex, carregada incrementalmente conforme o usuário percorre a lista.
 - RF02: O usuário deve poder filtrar a lista de Pokémon por tipo (ex.: fogo, água, elétrico).
 - RF03: O usuário deve poder filtrar a lista de Pokémon por geração.
 - RF04: O usuário deve poder combinar filtro de tipo e geração simultaneamente.
@@ -43,7 +43,7 @@ O conteúdo do aplicativo é exibido em português (pt-BR).
   - Habilidades.
   - Descrição textual da Pokédex.
   - Cadeia de evolução (Pokémon anteriores e/ou seguintes na linha evolutiva).
-  - Lista de movimentos (moves).
+  - Lista de movimentos aprendidos por subida de nível (`level-up`).
 - RF14: A partir da cadeia de evolução, o usuário deve poder navegar para a tela de detalhes de outro Pokémon da mesma linha evolutiva.
 - RF15: O sistema deve indicar de forma acessível o estado de carregamento enquanto os detalhes do Pokémon são obtidos.
 - RF16: O sistema deve exibir uma mensagem de erro compreensível caso não seja possível carregar os detalhes de um Pokémon.
@@ -70,17 +70,18 @@ O conteúdo do aplicativo é exibido em português (pt-BR).
 - RN02: Quando múltiplos filtros (tipo e geração) forem aplicados, o resultado deve exibir apenas Pokémon que atendam a todos os critérios simultaneamente (operação de interseção, não de união).
 - RN03: A cadeia de evolução exibida na tela de detalhes deve refletir a linha evolutiva oficial do Pokémon, incluindo estágios anteriores e posteriores, quando existirem.
 - RN04: Pokémon sem determinada informação (ex.: sem habilidades registradas, sem descrição disponível) devem ter essa seção omitida ou sinalizada como "não disponível", nunca exibida em branco sem explicação.
+- RN05: A listagem e a busca devem considerar somente a variedade padrão (`is_default`) de cada espécie.
 
 # Critérios de Aceite
 
-- CA01: Dado que o usuário abre a lista de Pokémon, quando a tela carrega, então os Pokémon são exibidos em ordem crescente de número da Pokédex, com carregamento incremental ao rolar a lista.
+- CA01: Dado que o usuário abre a lista de Pokémon, quando a tela carrega, então os Pokémon são exibidos em ordem crescente de número da Pokédex e novos itens são carregados incrementalmente conforme o usuário rola a lista.
 - CA02: Dado que o usuário aplica um filtro de tipo, quando o filtro é confirmado, então apenas Pokémon daquele tipo são exibidos na lista.
 - CA03: Dado que o usuário aplica filtros de tipo e geração simultaneamente, quando os filtros são confirmados, então apenas Pokémon que atendem a ambos os critérios são exibidos.
 - CA04: Dado que o usuário digita um nome parcial de Pokémon no campo de busca, quando a busca é executada, então são exibidos todos os Pokémon cujo nome contém o texto digitado, independente de maiúsculas/minúsculas.
 - CA05: Dado que o usuário pesquisa por um número de Pokédex válido, quando a busca é executada, então o Pokémon correspondente é exibido no resultado.
 - CA06: Dado que o usuário pesquisa por um tipo, quando a busca é executada, então todos os Pokémon daquele tipo são exibidos.
 - CA07: Dado que nenhum Pokémon corresponde à busca ou aos filtros aplicados, quando o resultado é exibido, então uma mensagem clara de "nenhum resultado encontrado" é apresentada.
-- CA08: Dado que o usuário seleciona um Pokémon na lista, quando a tela de detalhes carrega, então são exibidos nome, número, imagem, tipos, altura, peso, estatísticas base, habilidades, descrição, cadeia de evolução e movimentos.
+- CA08: Dado que o usuário seleciona um Pokémon na lista, quando a tela de detalhes carrega, então são exibidos nome, número, imagem, tipos, altura, peso, estatísticas base, habilidades, descrição, cadeia de evolução e movimentos aprendidos por subida de nível (`level-up`).
 - CA09: Dado que o usuário está na tela de detalhes e a cadeia de evolução é exibida, quando o usuário seleciona outro Pokémon da cadeia, então a tela de detalhes desse Pokémon é aberta.
 - CA10: Dado que ocorre uma falha ao buscar dados da PokéAPI, quando a falha acontece, então uma mensagem de erro compreensível é exibida com opção de tentar novamente.
 - CA11: Dado que o usuário ativa um leitor de tela (VoiceOver/TalkBack), quando navega por qualquer tela do aplicativo, então todos os elementos interativos e informativos são anunciados com rótulos descritivos e em ordem de leitura coerente.
@@ -96,10 +97,8 @@ O conteúdo do aplicativo é exibido em português (pt-BR).
 - Comparação entre Pokémon.
 - Batalhas, simulações ou qualquer mecânica de jogo.
 - Edição ou criação de dados (o aplicativo é somente leitura, consumindo dados da PokéAPI).
+- Formas e variedades alternativas ou regionais de Pokémon; a listagem e a busca consideram somente a variedade padrão (`is_default`).
 
 # Questões em Aberto
 
-- QA01: Deve haver algum limite ou paginação específica de itens carregados por vez na listagem (ex.: 20, 50 por página)?
-- QA02: A lista de movimentos exibida na tela de detalhes deve ser completa ou filtrada por método de aprendizado (ex.: apenas por nível, ou também por MT/tutor)?
-- QA03: Deve haver algum tratamento específico para Pokémon com formas alternativas/regionais (ex.: Alolan, Galarian) na busca e nos detalhes?
-- QA04: Existe uma versão mínima de sistema operacional (iOS/Android) que deve ser suportada para garantir compatibilidade com os recursos de acessibilidade nativos?
+- QA04: Qual versão mínima de iOS e Android deve ser suportada para garantir compatibilidade com React Native, Re.Pack e os recursos de acessibilidade nativos? Os valores atuais de referência são Android API 24 e iOS 15.1, ainda pendentes de validação técnica.

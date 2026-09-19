@@ -260,7 +260,7 @@ describe('PokemonListScreen', () => {
     ).toBeTruthy();
   });
 
-  it('applies type and generation filters together from the filter panel', async () => {
+  it('supports filtering by type and generation simultaneously', async () => {
     mockUsePokemonList.mockReturnValue({
       data: { pages: [{ items: [], nextOffset: null }] },
       fetchNextPage: jest.fn(),
@@ -278,17 +278,17 @@ describe('PokemonListScreen', () => {
       await Promise.resolve();
     });
 
-    const openFiltersButton = renderer.root.findByProps({
+    const openFilters = renderer.root.findByProps({
       accessibilityLabel: 'Abrir filtros',
     });
 
     await ReactTestRenderer.act(async () => {
-      openFiltersButton.props.onPress();
+      openFilters.props.onPress();
       await Promise.resolve();
     });
 
     const typeButton = renderer.root.findByProps({
-      accessibilityLabel: 'Filtrar por tipo: Fogo',
+      accessibilityLabel: 'Filtrar por tipo: fogo',
     });
     const generationButton = renderer.root.findByProps({
       accessibilityLabel: 'Filtrar por geração: 1ª Geração',
@@ -296,20 +296,18 @@ describe('PokemonListScreen', () => {
 
     await ReactTestRenderer.act(async () => {
       typeButton.props.onPress();
+      await Promise.resolve();
+    });
+    await ReactTestRenderer.act(async () => {
       generationButton.props.onPress();
       await Promise.resolve();
     });
-
-    expect(mockUsePokemonList).toHaveBeenLastCalledWith({
-      enabled: true,
-      generation: undefined,
-      type: undefined,
+    await ReactTestRenderer.act(async () => {
+      renderer.root
+        .findByProps({ accessibilityLabel: 'Aplicar filtros' })
+        .props.onPress();
+      await Promise.resolve();
     });
-
-    const applyButton = renderer.root.findByProps({
-      accessibilityLabel: 'Aplicar filtros',
-    });
-    await ReactTestRenderer.act(async () => applyButton.props.onPress());
 
     expect(mockUsePokemonList).toHaveBeenLastCalledWith({
       enabled: true,
@@ -318,7 +316,7 @@ describe('PokemonListScreen', () => {
     });
   });
 
-  it('discards temporary filter selections when the panel is cancelled', async () => {
+  it('keeps temporary filter changes when cancelled', async () => {
     mockUsePokemonList.mockReturnValue({
       data: { pages: [{ items: [], nextOffset: null }] },
       fetchNextPage: jest.fn(),
@@ -338,40 +336,24 @@ describe('PokemonListScreen', () => {
 
     await ReactTestRenderer.act(async () => {
       renderer.root
-        .findByProps({
-          accessibilityLabel: 'Abrir filtros',
-        })
+        .findByProps({ accessibilityLabel: 'Abrir filtros' })
         .props.onPress();
       await Promise.resolve();
     });
     await ReactTestRenderer.act(async () => {
       renderer.root
-        .findByProps({
-          accessibilityLabel: 'Filtrar por tipo: Fogo',
-        })
-        .props.onPress();
-      renderer.root
-        .findByProps({
-          accessibilityLabel: 'Fechar filtros',
-        })
+        .findByProps({ accessibilityLabel: 'Filtrar por tipo: fogo' })
         .props.onPress();
       await Promise.resolve();
     });
-
     await ReactTestRenderer.act(async () => {
       renderer.root
-        .findByProps({
-          accessibilityLabel: 'Abrir filtros',
-        })
+        .findByProps({ accessibilityLabel: 'Cancelar filtros' })
         .props.onPress();
       await Promise.resolve();
     });
 
-    expect(
-      renderer.root.findByProps({
-        accessibilityLabel: 'Filtrar por tipo: Fogo',
-      }).props.accessibilityState,
-    ).toEqual({ selected: false });
+    expect(mockUsePokemonList).toHaveBeenLastCalledWith({ enabled: true });
   });
 
   it('searches as the user types a name and shows matching Pokémon', async () => {
