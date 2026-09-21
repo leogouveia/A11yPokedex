@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -56,6 +56,8 @@ const GENERATION_FILTERS = [
   { label: '9ª Geração', value: '9' },
 ];
 
+const SCROLL_TO_TOP_THRESHOLD = 400;
+
 export function PokemonListScreen({
   navigation,
 }: {
@@ -106,7 +108,7 @@ export function PokemonListScreen({
     );
   }
 
-  if (listQuery.isError) {
+  if (listQuery.isError && !listQuery.data) {
     return (
       <ScreenShell
         onChangeSearch={setSearchTerm}
@@ -141,6 +143,7 @@ export function PokemonListScreen({
       <PokemonResultsList
         emptyActionLabel="Tentar novamente"
         emptyLabel="Nenhum Pokémon encontrado."
+        isFetchNextPageError={listQuery.isFetchNextPageError}
         isLoadingMore={listQuery.isFetchingNextPage || listQuery.isRefetching}
         items={items}
         navigation={navigation}
@@ -150,6 +153,7 @@ export function PokemonListScreen({
             listQuery.fetchNextPage();
           }
         }}
+        onFetchNextPageErrorAction={() => listQuery.fetchNextPage()}
       />
     </ScreenShell>
   );
@@ -279,6 +283,8 @@ function PokemonFilterBar({
     TYPE_FILTERS.find(filter => filter.value === selectedType)?.label,
     GENERATION_FILTERS.find(filter => filter.value === selectedGeneration)?.label,
   ].filter(Boolean);
+  const activeFilterCount =
+    Number(Boolean(selectedType)) + Number(Boolean(selectedGeneration));
 
   return (
     <View style={styles.filterSection}>
@@ -287,11 +293,17 @@ function PokemonFilterBar({
         accessibilityLabel="Abrir filtros"
         accessibilityRole="button"
         accessibilityState={{ expanded: isOpen }}
+        accessibilityValue={{
+          text:
+            activeFilterCount === 0
+              ? 'Nenhum filtro ativo'
+              : `${activeFilterCount} filtro${activeFilterCount === 1 ? '' : 's'} ativo${activeFilterCount === 1 ? '' : 's'}`,
+        }}
         onPress={openPanel}
         style={styles.filterTrigger}
       >
         <Text allowFontScaling style={styles.filterTriggerText}>
-          Filtros
+          {activeFilterCount > 0 ? `Filtros (${activeFilterCount})` : 'Filtros'}
         </Text>
         <Text allowFontScaling style={styles.filterSummary}>
           {activeFilters.length > 0
@@ -418,59 +430,97 @@ function PokemonFilterBar({
 type PokemonResultsListProps = {
   emptyActionLabel?: string;
   emptyLabel: string;
+  isFetchNextPageError?: boolean;
   isLoadingMore?: boolean;
   items: PokemonListItemModel[];
   navigation?: PokemonListNavigation;
   onEmptyAction?: () => void;
   onEndReached?: () => void;
+  onFetchNextPageErrorAction?: () => void;
 };
 
 function PokemonResultsList({
   emptyActionLabel,
   emptyLabel,
+  isFetchNextPageError = false,
   isLoadingMore = false,
   items,
   navigation,
   onEmptyAction,
   onEndReached,
+  onFetchNextPageErrorAction,
 }: PokemonResultsListProps) {
+  const listRef = useRef<FlatList<PokemonListItemModel> | null>(null);
+  const [showScrollToTop, setShowScrollToTop] = useState(false);
+
   return (
-    <FlatList
-      accessibilityLabel="Lista de Pokémon"
-      contentContainerStyle={
-        items.length === 0 ? styles.emptyList : styles.list
-      }
-      data={items}
-      ItemSeparatorComponent={ListItemSeparator}
-      keyExtractor={item => String(item.id)}
-      ListEmptyComponent={
-        items.length === 0 ? (
-          <StatusView
-            actionLabel={emptyActionLabel}
-            label={emptyLabel}
-            onAction={onEmptyAction}
+    <>
+      <FlatList
+        ref={listRef}
+        accessibilityLabel="Lista de Pokémon"
+        contentContainerStyle={
+          items.length === 0 ? styles.emptyList : styles.list
+        }
+        data={items}
+        ItemSeparatorComponent={ListItemSeparator}
+        keyExtractor={item => String(item.id)}
+        ListEmptyComponent={
+          items.length === 0 ? (
+            <StatusView
+              actionLabel={emptyActionLabel}
+              label={emptyLabel}
+              onAction={onEmptyAction}
+            />
+          ) : undefined
+        }
+        ListFooterComponent={
+          isLoadingMore ? (
+            <StatusView compact label="Carregando mais Pokémon." loading />
+          ) : isFetchNextPageError ? (
+            <StatusView
+              actionLabel="Tentar novamente"
+              compact
+              label="Não foi possível carregar mais Pokémon. Tente novamente."
+              onAction={onFetchNextPageErrorAction}
+            />
+          ) : undefined
+        }
+        onEndReached={onEndReached}
+        onEndReachedThreshold={0.5}
+        onScroll={({ nativeEvent }) =>
+          setShowScrollToTop(
+            nativeEvent.contentOffset.y >= SCROLL_TO_TOP_THRESHOLD,
+          )
+        }
+        renderItem={({ item }) => (
+          <PokemonListItem
+            onPress={
+              navigation
+                ? () =>
+                    navigation.navigate('PokemonDetail', { pokemonId: item.id })
+                : undefined
+            }
+            pokemon={item}
           />
-        ) : undefined
-      }
-      ListFooterComponent={
-        isLoadingMore ? (
-          <StatusView compact label="Carregando mais Pokémon." loading />
-        ) : undefined
-      }
-      onEndReached={onEndReached}
-      onEndReachedThreshold={0.5}
-      renderItem={({ item }) => (
-        <PokemonListItem
-          onPress={
-            navigation
-              ? () =>
-                  navigation.navigate('PokemonDetail', { pokemonId: item.id })
-              : undefined
+        )}
+        scrollEventThrottle={16}
+      />
+      {showScrollToTop ? (
+        <Pressable
+          accessibilityHint="Volta a lista para o início."
+          accessibilityLabel="Voltar ao topo"
+          accessibilityRole="button"
+          onPress={() =>
+            listRef.current?.scrollToOffset({ offset: 0, animated: true })
           }
-          pokemon={item}
-        />
-      )}
-    />
+          style={styles.scrollToTopButton}
+        >
+          <Text allowFontScaling style={styles.scrollToTopText}>
+            Voltar ao topo
+          </Text>
+        </Pressable>
+      ) : null}
+    </>
   );
 }
 
@@ -663,6 +713,20 @@ const styles = StyleSheet.create({
   },
   separator: {
     height: 12,
+  },
+  scrollToTopButton: {
+    alignItems: 'center',
+    alignSelf: 'center',
+    backgroundColor: '#0B7285',
+    borderRadius: 6,
+    justifyContent: 'center',
+    minHeight: 48,
+    paddingHorizontal: 20,
+  },
+  scrollToTopText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
   },
   status: {
     alignItems: 'center',

@@ -3,6 +3,8 @@ import { FlatList } from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 import { PokemonListScreen } from '../src/features/pokemon-list/screens/PokemonListScreen';
 
+const mockScrollToOffset = jest.fn();
+
 jest.mock('react-native', () => {
   const ReactRuntime = jest.requireActual('react');
 
@@ -25,13 +27,17 @@ jest.mock('react-native', () => {
   const TextInput = (props: Record<string, unknown>) =>
     ReactRuntime.createElement('TextInput', props);
 
-  function TestFlatList(props: {
+  const MockFlatList = ReactRuntime.forwardRef(function MockFlatListComponent(
+    props: {
     accessibilityLabel?: string;
     data: unknown[];
     ListEmptyComponent?: unknown;
     ListFooterComponent?: unknown;
     renderItem: (value: { item: unknown }) => unknown;
-  }) {
+    },
+    ref: React.Ref<{ scrollToOffset: typeof mockScrollToOffset }>,
+  ) {
+    ReactRuntime.useImperativeHandle(ref, () => ({ scrollToOffset: mockScrollToOffset }));
     const children = props.data.length
       ? props.data.map((item, index) =>
           ReactRuntime.createElement(
@@ -48,11 +54,11 @@ jest.mock('react-native', () => {
       children,
       props.ListFooterComponent,
     );
-  }
+  });
 
   return {
     ActivityIndicator,
-    FlatList: TestFlatList,
+    FlatList: MockFlatList,
     Image,
     Modal,
     Pressable,
@@ -73,6 +79,7 @@ jest.mock('../src/features/pokemon-list/hooks/usePokemonList', () => ({
 beforeEach(() => {
   mockUsePokemonList.mockReset();
   mockUsePokemonSearch.mockReset();
+  mockScrollToOffset.mockReset();
   mockUsePokemonSearch.mockReturnValue({
     data: undefined,
     error: null,
@@ -171,6 +178,60 @@ describe('PokemonListScreen', () => {
     expect(renderer.root.findByProps({ children: 'Bulbasaur' })).toBeTruthy();
   });
 
+  it('shows and activates the return-to-top button after significant scrolling', async () => {
+    mockUsePokemonList.mockReturnValue({
+      data: {
+        pages: [
+          {
+            items: [{ id: 1, name: 'bulbasaur', imageUrl: 'image' }],
+          },
+        ],
+      },
+      fetchNextPage: jest.fn(),
+      hasNextPage: false,
+      isError: false,
+      isFetchingNextPage: false,
+      isLoading: false,
+      isRefetching: false,
+      refetch: jest.fn(),
+    });
+
+    let renderer!: ReactTestRenderer.ReactTestRenderer;
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<PokemonListScreen />);
+      await Promise.resolve();
+    });
+
+    const list = renderer.root.findByType(FlatList);
+    expect(
+      renderer.root.findAllByProps({ accessibilityLabel: 'Voltar ao topo' }),
+    ).toHaveLength(0);
+
+    await ReactTestRenderer.act(async () => {
+      list.props.onScroll({ nativeEvent: { contentOffset: { y: 399 } } });
+    });
+    expect(
+      renderer.root.findAllByProps({ accessibilityLabel: 'Voltar ao topo' }),
+    ).toHaveLength(0);
+
+    await ReactTestRenderer.act(async () => {
+      list.props.onScroll({ nativeEvent: { contentOffset: { y: 400 } } });
+    });
+    const scrollToTopButton = renderer.root.findByProps({
+      accessibilityLabel: 'Voltar ao topo',
+    });
+    expect(scrollToTopButton.props.accessibilityRole).toBe('button');
+    expect(scrollToTopButton.props.accessibilityHint).toBe(
+      'Volta a lista para o início.',
+    );
+
+    ReactTestRenderer.act(() => scrollToTopButton.props.onPress());
+    expect(mockScrollToOffset).toHaveBeenCalledWith({
+      offset: 0,
+      animated: true,
+    });
+  });
+
   it('renders an error with a retry action', () => {
     const refetch = jest.fn();
     mockUsePokemonList.mockReturnValue({
@@ -260,6 +321,107 @@ describe('PokemonListScreen', () => {
     ).toBeTruthy();
   });
 
+  it('keeps loaded items visible and offers an accessible retry after incremental failure', async () => {
+    const fetchNextPage = jest.fn();
+    const refetch = jest.fn();
+    mockUsePokemonList.mockReturnValue({
+      data: {
+        pages: [
+          {
+            items: [{ id: 1, name: 'bulbasaur', imageUrl: 'image' }],
+          },
+        ],
+      },
+      error: new Error('Falha ao carregar a próxima página.'),
+      fetchNextPage,
+      hasNextPage: true,
+      isError: true,
+      isFetchNextPageError: true,
+      isFetchingNextPage: false,
+      isLoading: false,
+      isRefetching: false,
+      refetch,
+    });
+
+    let renderer!: ReactTestRenderer.ReactTestRenderer;
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<PokemonListScreen />);
+      await Promise.resolve();
+    });
+
+    expect(
+      renderer.root.findByProps({ accessibilityLabel: 'Bulbasaur, número 1' }),
+    ).toBeTruthy();
+    expect(
+      renderer.root.findByProps({
+        children: 'Não foi possível carregar mais Pokémon. Tente novamente.',
+      }),
+    ).toBeTruthy();
+
+    const retryButton = renderer.root.findByProps({
+      accessibilityLabel: 'Tentar novamente',
+    });
+    expect(retryButton.props.accessibilityRole).toBe('button');
+
+    await ReactTestRenderer.act(async () => retryButton.props.onPress());
+    expect(fetchNextPage).toHaveBeenCalledTimes(1);
+    expect(refetch).not.toHaveBeenCalled();
+  });
+
+  it('shows incremental loading instead of the error while retrying the next page', async () => {
+    const fetchNextPage = jest.fn();
+    const baseQuery = {
+      data: {
+        pages: [
+          {
+            items: [{ id: 1, name: 'bulbasaur', imageUrl: 'image' }],
+          },
+        ],
+      },
+      fetchNextPage,
+      hasNextPage: true,
+      isError: true,
+      isFetchNextPageError: true,
+      isLoading: false,
+      isRefetching: false,
+      refetch: jest.fn(),
+    };
+    mockUsePokemonList.mockReturnValue({
+      ...baseQuery,
+      isFetchingNextPage: false,
+    });
+
+    let renderer!: ReactTestRenderer.ReactTestRenderer;
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<PokemonListScreen />);
+      await Promise.resolve();
+    });
+    expect(
+      renderer.root.findByProps({
+        children: 'Não foi possível carregar mais Pokémon. Tente novamente.',
+      }),
+    ).toBeTruthy();
+
+    mockUsePokemonList.mockReturnValue({
+      ...baseQuery,
+      isFetchNextPageError: false,
+      isFetchingNextPage: true,
+    });
+    await ReactTestRenderer.act(async () => {
+      renderer.update(<PokemonListScreen />);
+      await Promise.resolve();
+    });
+
+    expect(
+      renderer.root.findByProps({ children: 'Carregando mais Pokémon.' }),
+    ).toBeTruthy();
+    expect(
+      renderer.root.findAllByProps({
+        children: 'Não foi possível carregar mais Pokémon. Tente novamente.',
+      }),
+    ).toHaveLength(0);
+  });
+
   it('supports filtering by type and generation simultaneously', async () => {
     mockUsePokemonList.mockReturnValue({
       data: { pages: [{ items: [], nextOffset: null }] },
@@ -276,6 +438,14 @@ describe('PokemonListScreen', () => {
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(<PokemonListScreen />);
       await Promise.resolve();
+    });
+
+    const filterButton = renderer.root.findByProps({
+      accessibilityLabel: 'Abrir filtros',
+    });
+    expect(filterButton.findByProps({ children: 'Filtros' })).toBeTruthy();
+    expect(filterButton.props.accessibilityValue).toEqual({
+      text: 'Nenhum filtro ativo',
     });
 
     const openFilters = renderer.root.findByProps({
@@ -309,11 +479,85 @@ describe('PokemonListScreen', () => {
       await Promise.resolve();
     });
 
+    expect(
+      renderer.root.findByProps({ children: 'Filtros (2)' }),
+    ).toBeTruthy();
     expect(mockUsePokemonList).toHaveBeenLastCalledWith({
       enabled: true,
       generation: '1',
       type: 'fire',
     });
+  });
+
+  it('shows the number of active filters on the filter button', async () => {
+    mockUsePokemonList.mockReturnValue({
+      data: { pages: [{ items: [], nextOffset: null }] },
+      fetchNextPage: jest.fn(),
+      hasNextPage: false,
+      isError: false,
+      isFetchingNextPage: false,
+      isLoading: false,
+      isRefetching: false,
+      refetch: jest.fn(),
+    });
+
+    let renderer!: ReactTestRenderer.ReactTestRenderer;
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<PokemonListScreen />);
+      await Promise.resolve();
+    });
+
+    expect(renderer.root.findByProps({ children: 'Filtros' })).toBeTruthy();
+
+    await ReactTestRenderer.act(async () => {
+      renderer.root
+        .findByProps({ accessibilityLabel: 'Abrir filtros' })
+        .props.onPress();
+      await Promise.resolve();
+    });
+    await ReactTestRenderer.act(async () => {
+      renderer.root
+        .findByProps({ accessibilityLabel: 'Filtrar por tipo: fogo' })
+        .props.onPress();
+      await Promise.resolve();
+    });
+    await ReactTestRenderer.act(async () => {
+      renderer.root
+        .findByProps({ accessibilityLabel: 'Aplicar filtros' })
+        .props.onPress();
+      await Promise.resolve();
+    });
+
+    expect(renderer.root.findByProps({ children: 'Filtros (1)' })).toBeTruthy();
+    expect(
+      renderer.root.findByProps({ accessibilityLabel: 'Abrir filtros' }).props
+        .accessibilityValue,
+    ).toEqual({ text: '1 filtro ativo' });
+
+    await ReactTestRenderer.act(async () => {
+      renderer.root
+        .findByProps({ accessibilityLabel: 'Abrir filtros' })
+        .props.onPress();
+      await Promise.resolve();
+    });
+    await ReactTestRenderer.act(async () => {
+      renderer.root
+        .findByProps({ accessibilityLabel: 'Filtrar por geração: 1ª Geração' })
+        .props.onPress();
+      await Promise.resolve();
+    });
+    await ReactTestRenderer.act(async () => {
+      renderer.root
+        .findByProps({ accessibilityLabel: 'Aplicar filtros' })
+        .props.onPress();
+      await Promise.resolve();
+    });
+
+    expect(renderer.root.findByProps({ children: 'Filtros (2)' })).toBeTruthy();
+    expect(
+      renderer.root.findByProps({ accessibilityLabel: 'Abrir filtros' }).props
+        .accessibilityValue,
+    ).toEqual({ text: '2 filtros ativos' });
   });
 
   it('keeps temporary filter changes when cancelled', async () => {
@@ -353,6 +597,59 @@ describe('PokemonListScreen', () => {
       await Promise.resolve();
     });
 
+    expect(mockUsePokemonList).toHaveBeenLastCalledWith({ enabled: true });
+  });
+
+  it('clears temporary filter changes before applying', async () => {
+    mockUsePokemonList.mockReturnValue({
+      data: { pages: [{ items: [], nextOffset: null }] },
+      fetchNextPage: jest.fn(),
+      hasNextPage: false,
+      isError: false,
+      isFetchingNextPage: false,
+      isLoading: false,
+      isRefetching: false,
+      refetch: jest.fn(),
+    });
+
+    let renderer!: ReactTestRenderer.ReactTestRenderer;
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<PokemonListScreen />);
+      await Promise.resolve();
+    });
+
+    await ReactTestRenderer.act(async () => {
+      renderer.root
+        .findByProps({ accessibilityLabel: 'Abrir filtros' })
+        .props.onPress();
+      await Promise.resolve();
+    });
+    await ReactTestRenderer.act(async () => {
+      renderer.root
+        .findByProps({ accessibilityLabel: 'Filtrar por tipo: fogo' })
+        .props.onPress();
+      await Promise.resolve();
+    });
+    await ReactTestRenderer.act(async () => {
+      renderer.root
+        .findByProps({ accessibilityLabel: 'Filtrar por geração: 1ª Geração' })
+        .props.onPress();
+      await Promise.resolve();
+    });
+    await ReactTestRenderer.act(async () => {
+      renderer.root
+        .findByProps({ accessibilityLabel: 'Limpar filtros' })
+        .props.onPress();
+      await Promise.resolve();
+    });
+    await ReactTestRenderer.act(async () => {
+      renderer.root
+        .findByProps({ accessibilityLabel: 'Aplicar filtros' })
+        .props.onPress();
+      await Promise.resolve();
+    });
+
+    expect(renderer.root.findByProps({ children: 'Filtros' })).toBeTruthy();
     expect(mockUsePokemonList).toHaveBeenLastCalledWith({ enabled: true });
   });
 
