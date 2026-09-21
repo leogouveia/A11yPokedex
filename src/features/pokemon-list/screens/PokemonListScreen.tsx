@@ -144,12 +144,16 @@ export function PokemonListScreen({
         emptyActionLabel="Tentar novamente"
         emptyLabel="Nenhum Pokémon encontrado."
         isFetchNextPageError={listQuery.isFetchNextPageError}
-        isLoadingMore={listQuery.isFetchingNextPage || listQuery.isRefetching}
+        isLoadingMore={listQuery.isFetchingNextPage}
         items={items}
         navigation={navigation}
         onEmptyAction={() => listQuery.refetch()}
         onEndReached={() => {
-          if (listQuery.hasNextPage && !listQuery.isFetchingNextPage) {
+          if (
+            listQuery.hasNextPage &&
+            !listQuery.isFetchingNextPage &&
+            !listQuery.isRefetching
+          ) {
             listQuery.fetchNextPage();
           }
         }}
@@ -479,6 +483,7 @@ function PokemonResultsList({
           ) : isFetchNextPageError ? (
             <StatusView
               actionLabel="Tentar novamente"
+              actionHint="Tenta carregar mais Pokémon."
               compact
               label="Não foi possível carregar mais Pokémon. Tente novamente."
               onAction={onFetchNextPageErrorAction}
@@ -529,6 +534,7 @@ function ListItemSeparator() {
 }
 
 type StatusViewProps = {
+  actionHint?: string;
   actionLabel?: string;
   compact?: boolean;
   label: string;
@@ -537,6 +543,7 @@ type StatusViewProps = {
 };
 
 function StatusView({
+  actionHint,
   actionLabel,
   compact,
   label,
@@ -557,7 +564,9 @@ function StatusView({
       </Text>
       {actionLabel && onAction ? (
         <Pressable
-          accessibilityHint="Refaz o carregamento dos Pokémon."
+          accessibilityHint={
+            actionHint ?? 'Refaz o carregamento dos Pokémon.'
+          }
           accessibilityRole="button"
           accessibilityLabel={actionLabel}
           onPress={onAction}

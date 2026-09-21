@@ -25,9 +25,7 @@
 - QA01: resolvida e aprovada. A listagem usa scrolling com carregamento incremental de 20 itens por lote; o tamanho do lote e um detalhe tecnico ajustavel, nao uma regra de produto.
 - QA02: resolvida e aprovada. A tela de detalhes exibe somente movimentos aprendidos por subida de nivel (`level-up`); os demais metodos ficam fora do escopo desta versao.
 - QA03: resolvida e aprovada. Listagem e busca consideram somente a variedade padrao (`is_default`); formas e variedades alternativas ou regionais ficam fora do escopo desta versao.
-- QA04: parcialmente validada pelo Tech Lead. Node 24.16.0, React Native 0.87.1, Re.Pack 5.4.0-canary e Rspack 1.7.12 atendem aos requisitos de versao conhecidos; Android API 24 e iOS 15.1 continuam pendentes de validacao nativa completa e formalizacao do deployment target iOS.
-
-QA04 nao bloqueia o planejamento tecnico nem a implementacao funcional imediata, mas bloqueia a formalizacao definitiva da matriz minima ate a validacao nativa iOS em ambiente macOS.
+- QA04: validada pelo Tech Lead. Node 24.16.0, React Native 0.87.1, Re.Pack 5.4.0-canary e Rspack 1.7.12 atendem aos requisitos de versao conhecidos;
 
 As evidencias de implementacao e revisao reconhecidas acima nao substituem a formalizacao das decisoes de produto pendentes.
 

@@ -137,7 +137,7 @@ Essas classificacoes sao propostas, nao decididas unilateralmente pelo Orchestra
 
 Somente uma questao confirmada como `BLOQUEADORA_DO_INCREMENTO` pode alterar a proxima etapa. Questao de requisito/produto pode levar a Spec Writer; questao de desenho tecnico pode levar a Tech Lead; uma questao ja decidida para o incremento pode ser registrada como resolvida pelo humano. Em todos os casos, a transicao exige aprovacao humana separada.
 
-A implementacao existente pode ser apresentada como evidencia para orientar a reconciliacao, inclusive indicando uma escolha tecnica ja adotada, mas nao encerra QA01-QA04 nem qualquer outra questao de produto sozinha. O Orchestrator deve distinguir explicitamente entre "implementado", "assumido", "decidido" e "aprovado".
+A implementacao existente pode ser apresentada como evidencia para orientar a reconciliacao, inclusive indicando uma escolha tecnica ja adotada, mas nao encerra QA01-QA03 nem qualquer outra questao de produto sozinha. O Orchestrator deve distinguir explicitamente entre "implementado", "assumido", "decidido" e "aprovado".
 
 ### Limite de enforcement da POC
 

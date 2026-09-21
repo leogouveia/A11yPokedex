@@ -34,7 +34,7 @@ Re.Pack 5 e compativel com as versoes atuais do projeto e atende explicitamente 
 - `@react-native/js-polyfills` e declarado diretamente na versao `0.87.1` para tornar explicita a compatibilidade exigida pelo layout do React Native 0.87.
 - O Re.Pack canary mantem `image-size@1.2.1`, com duas vulnerabilidades altas reportadas pelo npm audit e sem correcao compativel disponivel; isso permanece como divida tecnica ate correcao upstream segura.
 - Nenhum beneficio de code splitting ou Module Federation sera assumido sem novo requisito e novo ADR.
-- QA04 foi validada parcialmente em 2026-09-19: Node 24.16.0, React Native 0.87.1, Re.Pack 5.4.0-canary e Rspack 1.7.12 atendem aos requisitos de versao conhecidos; a matriz minima Android API 24/iOS 15.1 ainda depende de build e inicializacao nativa no iOS e da formalizacao do deployment target.
+- QA04 foi validada em ambiente nativo: Android API 24 e iOS 18.5 compilam, instalam e executam corretamente. iOS 27 permanece fora do baseline atual e sera tratado como divida tecnica separada, pois exige a adocao do lifecycle `UIScene`.
 
 ## Requisitos e Skills relacionados
 

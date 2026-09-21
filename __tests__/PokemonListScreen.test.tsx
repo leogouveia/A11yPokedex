@@ -283,6 +283,26 @@ describe('PokemonListScreen', () => {
       fetchNextPage,
       hasNextPage: true,
       isError: false,
+      isFetchingNextPage: false,
+      isLoading: false,
+      isRefetching: true,
+      refetch: jest.fn(),
+    });
+    await ReactTestRenderer.act(async () => {
+      renderer.update(<PokemonListScreen />);
+      await Promise.resolve();
+    });
+    await ReactTestRenderer.act(async () => list.props.onEndReached());
+    expect(fetchNextPage).toHaveBeenCalledTimes(1);
+    expect(
+      renderer.root.findAllByProps({ children: 'Carregando mais Pokémon.' }),
+    ).toHaveLength(0);
+
+    mockUsePokemonList.mockReturnValue({
+      data: { pages: [{ items: [], nextOffset: 20 }] },
+      fetchNextPage,
+      hasNextPage: true,
+      isError: false,
       isFetchingNextPage: true,
       isLoading: false,
       isRefetching: false,
@@ -362,6 +382,9 @@ describe('PokemonListScreen', () => {
       accessibilityLabel: 'Tentar novamente',
     });
     expect(retryButton.props.accessibilityRole).toBe('button');
+    expect(retryButton.props.accessibilityHint).toBe(
+      'Tenta carregar mais Pokémon.',
+    );
 
     await ReactTestRenderer.act(async () => retryButton.props.onPress());
     expect(fetchNextPage).toHaveBeenCalledTimes(1);

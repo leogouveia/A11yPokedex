@@ -101,4 +101,3 @@ O conteúdo do aplicativo é exibido em português (pt-BR).
 
 # Questões em Aberto
 
-- QA04: Qual versão mínima de iOS e Android deve ser suportada para garantir compatibilidade com React Native, Re.Pack e os recursos de acessibilidade nativos? Os valores atuais de referência são Android API 24 e iOS 15.1, ainda pendentes de validação técnica.

@@ -10,7 +10,7 @@
 - Jest esta configurado com o preset do React Native e possui apenas um teste de renderizacao do template.
 - O `metro.config.js` e os scripts atuais ainda pertencem ao fluxo Metro e deverao ser revisados durante a migracao, sem preservar configuracao Metro sem necessidade.
 - Android esta configurado com `minSdkVersion 24`; a versao minima de iOS ainda e herdada da configuracao do React Native e deve ser confirmada antes da implementacao.
-- Validacao de QA04 em 2026-09-19: Node `24.16.0`, React Native `0.87.1`, Re.Pack `5.4.0-canary-20260913172854` e Rspack `1.7.12` estao instalados sem conflitos aparentes; Android API 24 e iOS 15.1 permanecem valores de configuracao, nao uma matriz minima formalmente validada.
+- QA04 validada em ambiente nativo: Android API 24 e iOS 18.5 foram compilados, instalados e executados corretamente. Node `24.16.0`, React Native `0.87.1`, Re.Pack `5.4.0-canary-20260913172854` e Rspack `1.7.12` permanecem compativeis com os requisitos conhecidos. iOS 27 fica fora do baseline atual e sera tratado como divida tecnica separada pela exigencia de adocao do lifecycle `UIScene`.
 
 ## 2. Arquitetura alvo
 
@@ -64,7 +64,7 @@ O bundling deve permanecer simples: nao introduzir Module Federation, remotes, c
 ## 3.1. Impacto do bundler e fluxo de build
 
 - Confirmar a versao instalada do Node, React Native e Re.Pack antes de configurar; Re.Pack 5 requer Node 20+ e React Native 0.77+.
-- QA04: formalizar Android API 24 e iOS 15.1 somente apos validar o build e a inicializacao nativa nas duas plataformas; a validacao iOS requer ambiente macOS, e o `Podfile` ainda usa `min_ios_version_supported`.
+- QA04: baseline nativo validado em Android API 24 e iOS 18.5; a compatibilidade com iOS 27 permanece fora do baseline e depende da adocao futura do lifecycle `UIScene`.
 - Executar a ferramenta oficial de inicializacao/migracao do Re.Pack antes de criar arquivos manualmente.
 - Revisar os arquivos gerados, `package.json`, scripts da CLI, `metro.config.js` e qualquer configuracao nativa alterada; remover somente configuracao Metro que deixar de ser necessaria.
 - Manter o desenvolvimento iniciado pela React Native Community CLI, com Fast Refresh, source maps e comunicacao entre app nativo e servidor Re.Pack.
@@ -171,8 +171,7 @@ Executar em Android/TalkBack e iOS/VoiceOver: ordem de leitura, rotulos, foco, a
 - QA01 define o tamanho da pagina e afeta latencia, consumo e frequencia de requisicoes.
 - QA02 define se movimentos serao todos os movimentos retornados ou filtrados por metodo de aprendizado.
 - QA03 define identificacao, exibicao e busca de formas alternativas/regionais.
-- QA04 e a versao minima de iOS ainda precisam ser confirmados para fechar a matriz de compatibilidade.
-- QA04 foi parcialmente validada: as versoes JavaScript e Android sao compativeis com os requisitos conhecidos, mas a matriz minima Android/iOS continua aberta ate a validacao nativa iOS e a confirmacao da politica de deployment target.
+- QA04 foi validada em ambiente nativo para Android API 24 e iOS 18.5. iOS 27 permanece fora do baseline atual e exige uma mudanca tecnica separada para adotar o lifecycle `UIScene`.
 - A PokéAPI fornece nomes e descricoes em varios idiomas; deve ser definido o fallback quando nao houver entrada pt-BR.
 - A migracao pode exigir ajustes nos scripts da React Native Community CLI e nos pontos nativos de carregamento do bundle; sucesso da compilacao Rspack isolada nao prova que o app nativo inicia.
 - A configuracao de Re.Pack deve ser mantida compativel com a versao instalada; exemplos de Re.Pack anteriores nao devem ser copiados sem verificacao. A implementacao atual fixa temporariamente o canary 5.4.0 por causa das mudancas de layout do RN 0.87, devendo migrar para uma release estavel compativel quando disponivel.
